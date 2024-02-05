@@ -1,0 +1,270 @@
+<html><head>
+    <title>Homework 1</title>
+      <script src="https://d3js.org/d3.v7.min.js"></script>
+      <script src="https://d3js.org/topojson.v3.min.js"></script>
+      
+      <style>      
+        .neighborhood{
+            fill: #d3d3d3 ;
+            stroke:white;
+            stroke-width:1px;
+        }
+        .outline {
+          stroke: #fff;
+          stroke-width: 1px;
+          fill: none;
+        }
+        .gridlines .domain {
+          display: none;
+        }
+        .gridlines line{
+          stroke: #d3d3d3;
+        }
+        h1{
+          text-align: center;
+        }
+      
+      </style>
+    <h1>Who takes care of DPW Maintained Trees?</h1>
+    <!-- <svg id="map" height="600" width="600" style="background: #fff; margin-top:50px" >
+    </svg> -->
+    <svg id="contour0" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="bar0" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="contour1" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="bar1" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="contour2" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="bar2" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="contour3" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="bar3" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="contour4" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="bar4" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="contour5" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="bar5" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="contour6"  height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    <svg id="bar6" height="300" width="300" style="background: #fff; margin-top:50px" >
+    </svg>
+    
+
+    <script>
+      const testsvg = d3.select("#contour0");
+      const staticwidth = testsvg.attr("width");
+      const staticheight = testsvg.attr("height");
+      // const svg = d3.select("#map");
+      // const width = svg.attr("width");
+      // const height = svg.attr("height");
+        // const margin = { top: 20, right: 20, bottom: 20, left:20};
+        // const mapWidth = width - margin.left - margin.right;
+        // const mapHeight = height - margin.top - margin.bottom;
+        // const map = svg.append("g")
+        //                 .attr("transform","translate("+margin.left+","+margin.top+")");
+    
+    const requestData = async function(){
+    
+    const geojson = await d3.json("SF-Neighborhoods.geo.json");
+    console.log(geojson);
+    
+    // all the neighborhood polygons 
+    var neighborhoods = topojson.feature(geojson,geojson.objects.SFNeighborhoods); 
+    var districtMesh = topojson.mesh(geojson,geojson.objects.SFNeighborhoods);
+    console.log(neighborhoods);
+
+    // projection for log and lat onto map
+    var projection = d3.geoMercator().fitSize([staticwidth, staticheight], neighborhoods);
+    // color scale
+    // const colorscale = d3.scaleOrdinal(d3.schemeCategory10)
+    
+    //source for manual scales: https://colorbrewer2.org/#type=sequential&scheme=BuGn&n=5
+    // const colorscale = d3.scaleOrdinal(['(0,20]','(20,40]', '(40,60]', '(60, 80]', '(80, 150]'],['#99d8c9','#66c2a4','#41ae76','#238b45','#005824'])	
+    //circle size
+    // const radiusscale = d3.scaleOrdinal(['(0,20]','(20,40]', '(40,60]', '(60, 80]', '(80, 150]'],[1,2,3,4,5])	
+
+    // path generator to draw stuff
+    var path = d3.geoPath().projection(projection);
+
+    // map.selectAll("path.neighborhood").data(neighborhoods.features)
+    //   .join("path")
+    //   .attr("class", "neighborhood")
+    //   .attr('d', path);
+
+    const trees = await d3.csv("preprocessed2.csv", d3.autoType)
+    const summarystats = await d3.csv("preprocessed_counted.csv", d3.autoType)
+
+    console.log(trees)
+    console.log(summarystats)
+
+    trees.forEach(d=>{
+      d.Position = projection([d.Longitude, d.Latitude])
+      // d.Color = colorscale(d['qCaretaker'])
+      // d.Radius = radiusscale(d['DBH bucket'])
+    });
+    // console.log(trees)
+    // console.log(colorscale)
+
+    // map.selectAll("circle").data(trees)
+    //     .join("circle")
+    //     .attr("r", d=>d.Radius)
+    //     .attr("fill", d=>d.Color)
+    //     .attr("opacity", d=>((d.qCaretaker == "Port") ? 0.6 : 0.1))
+    //     .attr("cx", d=>d.Position[0])
+    //     .attr("cy", d=>d.Position[1])
+
+
+    // contour map instead
+  var caretakers = ['Private', 'DPW', 'SFUSD', 'Rec/Park', 'Port', 'Emergency Services', 'Other']
+  for (let i = 0; i < 7; i++) {
+
+  const csvg = d3.select(`#contour${i}`);
+  const cwidth = csvg.attr("width");
+  const cheight = csvg.attr("height");
+  const cmapWidth = cwidth;
+  const cmapHeight = cheight;
+  const cmap = csvg.append("g");
+
+    let contourGen = d3.contourDensity()
+                        .x(d=>d.Position[0])
+                        .y(d=>d.Position[1])
+                        .size([cwidth, cheight])
+                        .thresholds(10);
+    // source for .filter: https://d3-graph-gallery.com/graph/basic_datamanipulation.html
+    let contours = contourGen(trees.filter(d=>{ return d.qCaretaker == caretakers[i]}));
+    console.log(contours)
+
+    let valueExtent= d3.extent(contours,d=>d.value)
+    let colorScale0=d3.scaleSequential(d3.interpolate("#ffbaba", "#a70000")).domain(valueExtent)
+    let colorScale1=d3.scaleSequential(d3.interpolate("#cdddff", "#4a8dff")).domain(valueExtent)
+    let colorScale2=d3.scaleSequential(d3.interpolate("#f7d8b2", "#ff8c00")).domain(valueExtent)
+    let colorScale3=d3.scaleSequential(d3.interpolate("#8febb8", "#3cb371")).domain(valueExtent)
+    let colorScale4=d3.scaleSequential(d3.interpolate("#c0fae6", "#66cdaa")).domain(valueExtent)
+    let colorScale5=d3.scaleSequential(d3.interpolate("#fff9ae", "#a98600")).domain(valueExtent)
+    let colorScale6=d3.scaleSequential(d3.interpolate("#b37878", "#b22222")).domain(valueExtent)
+    var colorScales = [colorScale0,colorScale1,colorScale2,colorScale3,colorScale4,colorScale5,colorScale6]
+    var colorList = ["#a70000","#4a8dff","#ff8c00","#3cb371","#66cdaa","#a98600", "#b22222"]
+
+
+    cmap.selectAll("path.neighborhood").data(neighborhoods.features)
+      .join("path")
+      .attr("class", "neighborhood")
+      .attr('d', path);
+
+    let layer = cmap.append("g")
+
+    // https://stackoverflow.com/questions/20644415/d3-appending-text-to-a-svg-rectangle
+    cmap.append("text")
+      .attr("dx", 30)
+      .attr("dy", 30)
+      // .attr("class", "title")
+      // .fill(colorList[i])
+      // .stroke(colorList[i])
+      .text(caretakers[i]);
+      
+    console.log(caretakers[i])
+
+    layer.selectAll("path.contour") 
+          .data(contours)
+          .join("path")
+          .attr("class", "contour")
+          .attr("fill", d=> colorScales[i](d.value))
+          .attr("d", d3.geoPath());
+    
+    cmap.append("path").datum(districtMesh)
+         .attr("class","outline")
+         .attr("opacity", 0.5)
+         .attr("d", path);
+
+
+    //bar chart 
+    const bsvg = d3.select(`#bar${i}`);
+    const bwidth = bsvg.attr("width");
+    const bheight = bsvg.attr("height");
+    const margin = {top: 10, right: 10, bottom: 50, left: 50};
+    const bchartWidth = bwidth - margin.left - margin.right;
+    const bchartHeight = bheight - margin.top - margin.bottom;
+
+    let annotations = bsvg.append("g").attr("class","annotations");
+    let chartArea = bsvg.append("g").attr("id","points")
+                    .attr("transform",`translate(${margin.left},${margin.top})`);
+
+
+    let summarystats_filtered = summarystats.filter((d=>{ return d.qCaretaker == caretakers[i]}));
+
+    const yExtent = d3.extent(summarystats_filtered, d=>d['TreeID']);
+    const yScale = d3.scaleLog().domain([1, yExtent[1]+10]).range([bchartHeight, 0]);
+    
+    console.log("look here", yScale(100))
+    console.log("yextent", yExtent)
+
+    let leftAxis = d3.axisLeft(yScale);
+    let leftGridlines = d3.axisLeft(yScale)
+                          .tickSize(-bchartWidth-10)
+                          .tickFormat("")
+    annotations.append("g")
+               .attr("class", "y axis")
+               .attr("transform",`translate(${margin.left-10},${margin.top})`)
+               .call(leftAxis);
+
+    annotations.append("g")
+               .attr("class", "gridlines")
+               .attr("transform",`translate(${margin.left-10},${margin.top})`)
+               .call(leftGridlines);
+    
+
+    const DBH_buckets = d3.map(summarystats_filtered, d => d['DBH bucket'])  
+
+    const bucketScale = d3.scaleBand().domain(DBH_buckets).range([0, bchartWidth])
+                                     .padding(0.05);         
+    let bottomAxis = d3.axisBottom(bucketScale)//.tickSize(0);
+    annotations.append("g")
+               .attr("class", "x axis")
+               .attr("transform",`translate(${margin.left},${bchartHeight+margin.top+10})`)
+               .call(bottomAxis);
+
+    // https://stackoverflow.com/questions/11189284/d3-axis-labeling
+    bsvg.append("text")
+        .attr("class", "x label")
+        .attr("text-anchor", "end")
+        .attr("x", bwidth-20)
+        .attr("y", bheight - 6)
+        .text("Diameter at breast height (DBH)");
+
+    bsvg.append("text")
+        .attr("class", "y label")
+        .attr("text-anchor", "end")
+        .attr("y", 0)
+        .attr("dy", ".75em")
+        .attr("x", -60)
+        .attr("transform", "rotate(-90)")
+        .text("Number of Trees");
+    
+    
+    chartArea.selectAll('rect.bar').data(summarystats_filtered)
+             .join('rect').attr('class','bar')
+             .attr("fill", colorList[i])
+             .attr("x", d => bucketScale(d['DBH bucket']))
+             .attr("y", d => yScale(d['TreeID']))
+             .attr("height", d => yScale(1) - yScale(d['TreeID'])+1)
+             .attr("width", bucketScale.bandwidth());           
+
+
+
+
+  } //end of for loop
+  }
+   requestData();
+    
+    </script>
+
+    </head>
+    </html>

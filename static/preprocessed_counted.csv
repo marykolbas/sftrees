@@ -1,0 +1,23 @@
+qCaretaker,DBH bucket,TreeID
+DPW,"(0, 20]",5297
+DPW,"(20, 40]",721
+DPW,"(40, 60]",253
+DPW,"(60, 80]",91
+DPW,"(80, 160]",76
+Emergency Services,"(0, 20]",21
+Emergency Services,"(20, 40]",2
+Other,"(0, 20]",18
+Other,"(20, 40]",2
+Port,"(0, 20]",36
+Port,"(20, 40]",5
+Private,"(0, 20]",25534
+Private,"(20, 40]",1236
+Private,"(40, 60]",170
+Private,"(60, 80]",48
+Private,"(80, 160]",22
+Rec/Park,"(0, 20]",30
+Rec/Park,"(20, 40]",6
+Rec/Park,"(40, 60]",7
+Rec/Park,"(80, 160]",1
+SFUSD,"(0, 20]",172
+SFUSD,"(20, 40]",8
